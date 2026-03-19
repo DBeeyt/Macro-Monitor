@@ -1280,49 +1280,45 @@ const SERIES = {
 // Fetch log — records outcome of every fetch for the status panel
 const fetchLog = {};
 
-// ─── YAHOO FETCH ──────────────────────────────────────────────────────────────
+// ─── YAHOO FETCH — routed via corsproxy.io to bypass CORS block ──────────────
 async function fetchYahoo(symbol) {
-  const urls = [
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
-    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`
-  ];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const result = json.chart?.result?.[0];
-      if (!result) throw new Error('empty result');
-      const closes = (result.indicators?.quote?.[0]?.close || []).filter(Boolean);
-      const current = result.meta?.regularMarketPrice || closes[closes.length - 1];
-      if (!current) throw new Error('no price');
-      const prev = closes[closes.length - 2] || current;
-      return {
-        value: current,
-        change: current - prev,
-        pct: ((current - prev) / Math.abs(prev)) * 100,
-        history: closes.slice(-30),
-        source: 'YAHOO',
-        asOf: 'live'
-      };
-    } catch (e) {
-      console.warn(`Yahoo ${symbol} (${url.includes('query1') ? 'q1' : 'q2'}):`, e.message);
-    }
-  }
-  return null;
-}
-
-// ─── FRED FETCH — via fred.libhack.so public CORS proxy (no API key needed) ───
-// FRED's own API blocks CORS from browser frontends. This free public proxy
-// wraps FRED with permissive CORS headers. No key required.
-async function fetchFRED(seriesId) {
+  // Yahoo blocks direct browser requests from github.io — route via corsproxy.io
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
   try {
-    const url = `https://fred.libhack.so/v0/observations?series_id=${seriesId}&observation_start=2025-01-01`;
-    const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    const res = await fetch(proxyUrl, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    // Returns array of {date, value} objects in ascending date order
-    const vals = (Array.isArray(json) ? json : []).filter(o => o.value !== null && o.value !== '.');
+    const result = json.chart?.result?.[0];
+    if (!result) throw new Error('empty result');
+    const closes = (result.indicators?.quote?.[0]?.close || []).filter(Boolean);
+    const current = result.meta?.regularMarketPrice || closes[closes.length - 1];
+    if (!current) throw new Error('no price');
+    const prev = closes[closes.length - 2] || current;
+    return {
+      value: current,
+      change: current - prev,
+      pct: ((current - prev) / Math.abs(prev)) * 100,
+      history: closes.slice(-30),
+      source: 'YAHOO',
+      asOf: 'live'
+    };
+  } catch (e) {
+    console.warn(`Yahoo ${symbol}:`, e.message);
+    return null;
+  }
+}
+
+// ─── FRED FETCH — via corsproxy.io (reliable free CORS proxy, no key needed) ──
+async function fetchFRED(seriesId) {
+  // corsproxy.io prepends CORS headers to any URL — widely used, reliable
+  const fredUrl = `https://fred.stlouisfed.org/graph/fredgraph.json?id=${seriesId}`;
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fredUrl)}`;
+  try {
+    const res = await fetch(proxyUrl, { mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const vals = (json.observations || []).filter(o => o.value !== '.').slice(-30);
     if (!vals.length) throw new Error('no observations');
     const current = parseFloat(vals[vals.length - 1].value);
     const prev    = parseFloat(vals[vals.length - 2].value);
