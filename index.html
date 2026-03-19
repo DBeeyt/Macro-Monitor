@@ -1284,7 +1284,7 @@ const fetchLog = {};
 async function fetchYahoo(symbol) {
   // Yahoo blocks direct browser requests from github.io — route via corsproxy.io
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`;
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
+  const proxyUrl = `https://corsproxy.io/?${yahooUrl}`;
   try {
     const res = await fetch(proxyUrl, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1313,7 +1313,7 @@ async function fetchYahoo(symbol) {
 async function fetchFRED(seriesId) {
   // corsproxy.io prepends CORS headers to any URL — widely used, reliable
   const fredUrl = `https://fred.stlouisfed.org/graph/fredgraph.json?id=${seriesId}`;
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fredUrl)}`;
+  const proxyUrl = `https://corsproxy.io/?${fredUrl}`;
   try {
     const res = await fetch(proxyUrl, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
