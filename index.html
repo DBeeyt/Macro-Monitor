@@ -1312,20 +1312,17 @@ async function fetchYahoo(symbol) {
   return null;
 }
 
-// ─── FRED FETCH — official API endpoint, CORS-compliant from any hosted origin ─
-const FRED_API_KEY = '5299d5d7cce61cfe61606dffc288552f';
-
+// ─── FRED FETCH — via fred.libhack.so public CORS proxy (no API key needed) ───
+// FRED's own API blocks CORS from browser frontends. This free public proxy
+// wraps FRED with permissive CORS headers. No key required.
 async function fetchFRED(seriesId) {
   try {
-    // api.stlouisfed.org supports CORS from hosted pages; fredgraph.json does not
-    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=30`;
+    const url = `https://fred.libhack.so/v0/observations?series_id=${seriesId}&observation_start=2025-01-01`;
     const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    if (json.error_code) throw new Error(json.error_message || 'FRED API error');
-    const vals = (json.observations || [])
-      .filter(o => o.value !== '.')
-      .reverse(); // API returns desc order, reverse to asc for sparklines
+    // Returns array of {date, value} objects in ascending date order
+    const vals = (Array.isArray(json) ? json : []).filter(o => o.value !== null && o.value !== '.');
     if (!vals.length) throw new Error('no observations');
     const current = parseFloat(vals[vals.length - 1].value);
     const prev    = parseFloat(vals[vals.length - 2].value);
