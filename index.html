@@ -1312,14 +1312,20 @@ async function fetchYahoo(symbol) {
   return null;
 }
 
-// ─── FRED FETCH ───────────────────────────────────────────────────────────────
+// ─── FRED FETCH — official API endpoint, CORS-compliant from any hosted origin ─
+const FRED_API_KEY = '5299d5d7cce61cfe61606dffc288552f';
+
 async function fetchFRED(seriesId) {
   try {
-    const url = `https://fred.stlouisfed.org/graph/fredgraph.json?id=${seriesId}`;
+    // api.stlouisfed.org supports CORS from hosted pages; fredgraph.json does not
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=30`;
     const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    const vals = (json.observations || []).filter(o => o.value !== '.').slice(-30);
+    if (json.error_code) throw new Error(json.error_message || 'FRED API error');
+    const vals = (json.observations || [])
+      .filter(o => o.value !== '.')
+      .reverse(); // API returns desc order, reverse to asc for sparklines
     if (!vals.length) throw new Error('no observations');
     const current = parseFloat(vals[vals.length - 1].value);
     const prev    = parseFloat(vals[vals.length - 2].value);
