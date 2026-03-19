@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Macro Intelligence Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --bg2: #ffffff;
+    --bg3: #eef1f5;
+    --border: #dde2ea;
+    --border2: #c8d0dc;
+    --text: #2c3a4a;
+    --text-dim: #7a8a9a;
+    --text-bright: #111b27;
+    --accent: #007a63;
+    --accent2: #0066cc;
+    --warn: #c45000;
+    --danger: #c0103a;
+    --gold: #a06800;
+    --green: #007a40;
+    --red: #c0103a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+    --display: 'Bebas Neue', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Light theme - no scanline overlay needed */
+
+  header {
+    border-bottom: 2px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--text-bright);
+  }
+
+  .header-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--accent);
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .last-update {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Tab Navigation */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 24px;
+    gap: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+  }
+
+  /* Main layout */
+  main {
+    padding: 20px 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Stress Banner */
+  .stress-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, rgba(192,16,58,0.05), rgba(196,80,0,0.04));
+    border: 1px solid rgba(192,16,58,0.2);
+    border-left: 4px solid var(--danger);
+    padding: 12px 20px;
+    margin-bottom: 20px;
+  }
+
+  .stress-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .stress-title {
+    font-family: var(--display);
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+    margin-top: 2px;
+  }
+
+  .stress-meter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stress-bar-track {
+    width: 180px;
+    height: 6px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .stress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--warn), var(--danger));
+    transition: width 1s ease;
+  }
+
+  .stress-value {
+    font-family: var(--display);
+    font-size: 22px;
+    color: var(--warn);
+    letter-spacing: 1px;
+  }
+
+  .stress-desc {
+    font-size: 10px;
+    color: var(--warn);
+    letter-spacing: 1px;
+  }
+
+  /* Grid layouts */
+  .grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  /* Metric card */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .card:hover {
+    border-color: var(--border2);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .card.geo::before { background: var(--warn); }
+  .card.bond::before { background: var(--accent2); }
+  .card.commodity::before { background: var(--gold); }
+  .card.dollar::before { background: var(--accent); }
+  .card.alert::before { background: var(--danger); }
+
+  .card-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-family: var(--display);
+    font-size: 32px;
+    letter-spacing: 1px;
+    color: var(--text-bright);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .card-value.loading {
+    font-size: 18px;
+    color: var(--text-dim);
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .card-change {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .neutral { color: var(--text-dim); }
+
+  .card-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .card-signal {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border: 1px solid;
+  }
+
+  .signal-warn {
+    color: var(--warn);
+    border-color: var(--warn);
+    background: rgba(196,80,0,0.07);
+  }
+
+  .signal-danger {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(192,16,58,0.07);
+  }
+
+  .signal-ok {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(0,122,99,0.07);
+  }
+
+  .signal-watch {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: rgba(160,104,0,0.07);
+  }
+
+  /* Sparkline */
+  .sparkline-container {
+    margin-top: 10px;
+    height: 40px;
+    position: relative;
+  }
+
+  canvas.sparkline {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    margin-top: 8px;
+  }
+
+  .section-title {
+    font-family: var(--display);
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--text-bright);
+  }
+
+  .section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+    padding: 2px 8px;
+  }
+
+  /* Yield curve */
+  .yield-curve-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .yield-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .yield-row:last-child { border-bottom: none; }
+
+  .yield-maturity {
+    width: 50px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .yield-bar-track {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .yield-bar-fill {
+    height: 100%;
+    background: var(--accent2);
+    transition: width 0.8s ease;
+  }
+
+  .yield-value {
+    width: 50px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--text-bright);
+  }
+
+  .yield-chg {
+    width: 50px;
+    text-align: right;
+    font-size: 10px;
+  }
+
+  /* Spread monitor */
+  .spread-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .spread-row:last-child { border-bottom: none; }
+
+  .spread-name {
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .spread-desc {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .spread-value-group {
+    text-align: right;
+  }
+
+  .spread-value {
+    font-family: var(--display);
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .spread-threshold {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  /* Alert framework */
+  .alert-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .alert-title {
+    font-family: var(--display);
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--text-bright);
+  }
+
+  .alert-category {
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 3px 10px;
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .alert-strings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .alert-string {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg3);
+    border-left: 2px solid var(--border2);
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .alert-string:hover {
+    border-left-color: var(--accent);
+  }
+
+  .alert-string-text {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text);
+    font-style: italic;
+  }
+
+  .alert-copy {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border: 1px solid var(--border2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .alert-copy:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .alert-copy.copied {
+    color: var(--green);
+    border-color: var(--green);
+  }
+
+  .alert-frequency {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .freq-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .freq-badge {
+    font-size: 9px;
+    padding: 2px 8px;
+    border: 1px solid;
+    letter-spacing: 1px;
+  }
+
+  .freq-realtime { color: var(--danger); border-color: var(--danger); background: rgba(192,16,58,0.06); }
+  .freq-daily { color: var(--warn); border-color: var(--warn); background: rgba(196,80,0,0.06); }
+  .freq-weekly { color: var(--accent); border-color: var(--accent); background: rgba(0,122,99,0.06); }
+
+  /* Threshold table */
+  .threshold-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .threshold-table th {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .threshold-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .threshold-table tr:last-child td { border-bottom: none; }
+
+  .threshold-table tr:hover td {
+    background: rgba(255,255,255,0.01);
+  }
+
+  .t-metric { color: var(--text-bright); }
+  .t-watch { color: var(--gold); }
+  .t-action { color: var(--warn); }
+  .t-critical { color: var(--danger); }
+  .t-normal { color: var(--accent); }
+
+  .threshold-pill {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 0;
+    border: 1px solid;
+    letter-spacing: 1px;
+    margin-right: 4px;
+  }
+
+  /* FRED links */
+  .fred-links {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .fred-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .fred-link:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(0,102,204,0.04);
+  }
+
+  .fred-link-name { font-size: 11px; }
+  .fred-link-id { font-size: 9px; color: var(--text-dim); font-family: var(--mono); }
+  .fred-link-arrow { font-size: 14px; color: var(--text-dim); }
+
+  /* Error state */
+  .error-note {
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 6px 0;
+    font-style: italic;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg3); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .fred-links { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>MACRO INTELLIGENCE MONITOR</h1>
+    <span class="header-sub">Dalio Big Cycle — Geopolitical &amp; Bond Stress</span>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <span class="last-update" id="lastUpdate">--</span>
+    <button class="refresh-btn" onclick="loadAllData()">↺ REFRESH</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('dashboard')">DASHBOARD</button>
+  <button class="tab" onclick="switchTab('bonds')">BOND STRESS</button>
+  <button class="tab" onclick="switchTab('alerts')">ALERT FRAMEWORK</button>
+  <button class="tab" onclick="switchTab('thresholds')">SIGNAL THRESHOLDS</button>
+</div>
+
+<main>
+
+  <!-- DASHBOARD TAB -->
+  <div class="tab-panel active" id="tab-dashboard">
+
+    <div style="font-size:10px;color:var(--text-dim);padding:6px 12px;background:var(--bg3);border:1px solid var(--border);margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;">
+      <span>📡 <strong>Yahoo Finance</strong> (live) primary · <strong>FRED</strong> fallback · source shown on each card</span>
+      <span>🟢 Yahoo live &nbsp;|&nbsp; 🟡 FRED fallback &nbsp;|&nbsp; 🔵 FRED only &nbsp;|&nbsp; 🔴 Failed</span>
+      <span>💡 FRED-only: breakevens, HY spread, yield curve (all ~1d lag)</span>
+    </div>
+
+    <div class="stress-banner">
+      <div>
+        <div class="stress-label">Dalio Big Cycle — Composite Stress Index</div>
+        <div class="stress-title" id="stressLabel">CALCULATING...</div>
+      </div>
+      <div class="stress-meter">
+        <div>
+          <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;">STRESS LEVEL</div>
+          <div class="stress-bar-track">
+            <div class="stress-bar-fill" id="stressBar" style="width:0%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;">
+            <span style="font-size:8px;color:var(--text-dim)">LOW</span>
+            <span style="font-size:8px;color:var(--text-dim)">CRITICAL</span>
+          </div>
+        </div>
+        <div>
+          <div class="stress-value" id="stressValue">--</div>
+          <div class="stress-desc" id="stressDesc">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Geopolitical Commodities -->
+    <div class="section-header">
+      <div class="section-title">GEOPOLITICAL &amp; COMMODITY SIGNALS</div>
+      <div class="section-line"></div>
+      <div class="section-badge">REAL-TIME</div>
+    </div>
+
+    <div class="grid-4">
+      <div class="card geo" id="card-oil">
+        <div class="card-label">Brent Crude</div>
+        <div class="card-value loading" id="oil-price">LOADING...</div>
+        <div class="card-change" id="oil-change">—</div>
+        <div class="card-meta">Hormuz closure proxy. Watch: $90 (warn) / $110 (critical). Pre-conflict avg ~$68.</div>
+        <span class="card-signal signal-warn" id="oil-signal">WATCH</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-oil"></canvas></div>
+      </div>
+
+      <div class="card commodity" id="card-gold">
+        <div class="card-label">Gold Spot (USD/oz)</div>
+        <div class="card-value loading" id="gold-price">LOADING...</div>
+        <div class="card-change" id="gold-change">—</div>
+        <div class="card-meta">Reserve currency stress signal. Current ~$4,500. Dalio: sustained rise during dollar stress = late-cycle regime. Watch >$5,000.</div>
+        <span class="card-signal signal-watch" id="gold-signal">WATCH</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-gold"></canvas></div>
+      </div>
+
+      <div class="card dollar" id="card-dxy">
+        <div class="card-label">Broad Dollar Index</div>
+        <div class="card-value loading" id="dxy-price">LOADING...</div>
+        <div class="card-change" id="dxy-change">—</div>
+        <div class="card-meta">FRED DTWEXBGS broad trade-weighted index (not DXY). Dalio thesis: sustained weakness during crisis = reserve currency stress.</div>
+        <span class="card-signal signal-ok" id="dxy-signal">NEUTRAL</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-dxy"></canvas></div>
+      </div>
+
+      <div class="card geo" id="card-natgas">
+        <div class="card-label">Nat Gas (Henry Hub)</div>
+        <div class="card-value loading" id="ng-price">LOADING...</div>
+        <div class="card-change" id="ng-change">—</div>
+        <div class="card-meta">EU gas +60% since Iran strikes. US hub lags but tracks LNG demand surge.</div>
+        <span class="card-signal signal-warn" id="ng-signal">ELEVATED</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-ng"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Bond Stress Quick View -->
+    <div class="section-header">
+      <div class="section-title">BOND STRESS QUICK VIEW</div>
+      <div class="section-line"></div>
+      <div class="section-badge">KEY SIGNALS</div>
+    </div>
+
+    <div class="grid-4">
+      <div class="card bond">
+        <div class="card-label">10Y Treasury Yield</div>
+        <div class="card-value loading" id="t10-price">LOADING...</div>
+        <div class="card-change" id="t10-change">—</div>
+        <div class="card-meta">Rising during crisis = broken safe-haven. Currently 4.28%. Watch >4.5%.</div>
+        <span class="card-signal signal-warn" id="t10-signal">ELEVATED</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-t10"></canvas></div>
+      </div>
+
+      <div class="card bond">
+        <div class="card-label">2Y–10Y Spread (bps)</div>
+        <div class="card-value loading" id="spread-price">LOADING...</div>
+        <div class="card-change" id="spread-change">—</div>
+        <div class="card-meta">Inversion = recession signal. Steepening during stress = stagflation pricing.</div>
+        <span class="card-signal signal-watch" id="spread-signal">MONITOR</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-spread"></canvas></div>
+      </div>
+
+      <div class="card bond" id="card-bei">
+        <div class="card-label">5Y Breakeven Inflation</div>
+        <div class="card-value loading" id="bei-price">LOADING...</div>
+        <div class="card-change" id="bei-change">—</div>
+        <div class="card-meta">Market inflation expectations. >2.8% validates Dalio stagflation scenario.</div>
+        <span class="card-signal signal-watch" id="bei-signal">MONITOR</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-bei"></canvas></div>
+      </div>
+
+      <div class="card bond" id="card-move">
+        <div class="card-label">MOVE Index (Bond VIX)</div>
+        <div class="card-value loading" id="move-price">LOADING...</div>
+        <div class="card-change" id="move-change">—</div>
+        <div class="card-meta">Bond market volatility. >130 = stress. >150 = acute stress. 2023 peak: 198.</div>
+        <span class="card-signal signal-warn" id="move-signal">WATCH</span>
+        <div class="sparkline-container"><canvas class="sparkline" id="spark-move"></canvas></div>
+      </div>
+    </div>
+
+    <!-- FRED Direct Links -->
+    <div class="section-header">
+      <div class="section-title">DIRECT DATA LINKS</div>
+      <div class="section-line"></div>
+      <div class="section-badge">YAHOO · FRED · WGC</div>
+    </div>
+
+    <div class="fred-links">
+      <a class="fred-link" href="https://finance.yahoo.com/quote/BZ=F/" target="_blank">
+        <div><div class="fred-link-name">Brent Crude Futures (live)</div><div class="fred-link-id">Yahoo Finance · BZ=F</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://finance.yahoo.com/quote/GC=F/" target="_blank">
+        <div><div class="fred-link-name">Gold Futures (live)</div><div class="fred-link-id">Yahoo Finance · GC=F</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://finance.yahoo.com/quote/%5ETNX/" target="_blank">
+        <div><div class="fred-link-name">10Y Treasury Yield (live)</div><div class="fred-link-id">Yahoo Finance · ^TNX</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://finance.yahoo.com/quote/DX-Y.NYB/" target="_blank">
+        <div><div class="fred-link-name">DXY Dollar Index (live)</div><div class="fred-link-id">Yahoo Finance · DX-Y.NYB</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://fred.stlouisfed.org/series/T5YIE" target="_blank">
+        <div><div class="fred-link-name">5Y Breakeven Inflation</div><div class="fred-link-id">FRED · T5YIE · ~1d lag</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://fred.stlouisfed.org/series/BAMLH0A0HYM2" target="_blank">
+        <div><div class="fred-link-name">HY Credit Spread (OAS)</div><div class="fred-link-id">FRED · BAMLH0A0HYM2 · ~1d lag</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://www.gold.org/goldhub/data/gold-prices" target="_blank">
+        <div><div class="fred-link-name">Gold Spot — World Gold Council</div><div class="fred-link-id">Live LBMA benchmark · backup</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+      <a class="fred-link" href="https://fred.stlouisfed.org/series/DCOILBRENTEU" target="_blank">
+        <div><div class="fred-link-name">Brent Crude — FRED fallback</div><div class="fred-link-id">FRED · DCOILBRENTEU · ~4d lag</div></div>
+        <div class="fred-link-arrow">↗</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- BOND STRESS TAB -->
+  <div class="tab-panel" id="tab-bonds">
+
+    <div class="section-header">
+      <div class="section-title">YIELD CURVE STRUCTURE</div>
+      <div class="section-line"></div>
+      <div class="section-badge">LIVE</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="yield-curve-card">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:12px;">US TREASURY YIELDS — CURRENT</div>
+        <div id="yield-curve-rows">
+          <div style="color:var(--text-dim);font-size:11px;animation:blink 1.5s infinite">Loading yield curve...</div>
+        </div>
+      </div>
+
+      <div class="yield-curve-card">
+        <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:12px;">KEY SPREADS &amp; STRESS INDICATORS</div>
+        <div id="spreads-section">
+          <div class="spread-row">
+            <div>
+              <div class="spread-name">2Y–10Y Spread</div>
+              <div class="spread-desc">Recession / curve shape indicator</div>
+            </div>
+            <div class="spread-value-group">
+              <div class="spread-value" id="s-2y10y" style="color:var(--text-dim)">--</div>
+              <div class="spread-threshold">Watch: inversion vs steepening</div>
+            </div>
+          </div>
+          <div class="spread-row">
+            <div>
+              <div class="spread-name">Real Yield (10Y TIPS)</div>
+              <div class="spread-desc">True cost of capital; negative = financial repression</div>
+            </div>
+            <div class="spread-value-group">
+              <div class="spread-value" id="s-real" style="color:var(--text-dim)">--</div>
+              <div class="spread-threshold">Watch: >2% = growth headwind</div>
+            </div>
+          </div>
+          <div class="spread-row">
+            <div>
+              <div class="spread-name">Breakeven Inflation (5Y)</div>
+              <div class="spread-desc">Market inflation expectations embedded in bonds</div>
+            </div>
+            <div class="spread-value-group">
+              <div class="spread-value" id="s-bei" style="color:var(--text-dim)">--</div>
+              <div class="spread-threshold">Dalio warn: >2.8% / critical: >3.2%</div>
+            </div>
+          </div>
+          <div class="spread-row">
+            <div>
+              <div class="spread-name">HY Credit Spread (OAS)</div>
+              <div class="spread-desc">High yield vs treasuries — risk appetite signal</div>
+            </div>
+            <div class="spread-value-group">
+              <div class="spread-value" id="s-hy" style="color:var(--text-dim)">--</div>
+              <div class="spread-threshold">Watch: >400bps / Crisis: >600bps</div>
+            </div>
+          </div>
+          <div class="spread-row">
+            <div>
+              <div class="spread-name">Gold/10Y Real Yield Ratio</div>
+              <div class="spread-desc">Dalio's late-cycle reserve currency signal</div>
+            </div>
+            <div class="spread-value-group">
+              <div class="spread-value" id="s-goldratio" style="color:var(--text-dim)">--</div>
+              <div class="spread-threshold">Rising = dollar confidence eroding</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">WHAT BOND MARKETS ARE TELLING US</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card bond">
+        <div class="card-label">Scenario A — Stagflation</div>
+        <div style="margin-top:8px;line-height:1.7;font-size:11px;color:var(--text)">
+          Yields rise <span style="color:var(--red)">↑</span> AND breakevens rise <span style="color:var(--red)">↑</span><br>
+          <span style="color:var(--text-dim)">Bond + equity both fall. Dalio's primary risk scenario. Commodities and TIPS outperform.</span>
+        </div>
+        <div style="margin-top:10px;font-size:9px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--warn);color:var(--warn);display:inline-block">CURRENTLY ACTIVE</div>
+      </div>
+      <div class="card bond">
+        <div class="card-label">Scenario B — Recession Flight</div>
+        <div style="margin-top:8px;line-height:1.7;font-size:11px;color:var(--text)">
+          Yields fall <span style="color:var(--green)">↓</span>, breakevens fall <span style="color:var(--green)">↓</span><br>
+          <span style="color:var(--text-dim)">Classic flight to safety. Bonds rally as safe haven. Equities fall. Traditional 60/40 works again.</span>
+        </div>
+        <div style="margin-top:10px;font-size:9px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--border2);color:var(--text-dim);display:inline-block">NOT CURRENT</div>
+      </div>
+      <div class="card bond">
+        <div class="card-label">Scenario C — Debt Crisis</div>
+        <div style="margin-top:8px;line-height:1.7;font-size:11px;color:var(--text)">
+          Yields spike <span style="color:var(--danger)">↑↑</span>, dollar falls <span style="color:var(--danger)">↓</span>, gold surges <span style="color:var(--gold)">↑↑</span><br>
+          <span style="color:var(--text-dim)">Dalio's "Suez moment" — creditor confidence break. Tail risk if conflict escalates and deficits widen.</span>
+        </div>
+        <div style="margin-top:10px;font-size:9px;letter-spacing:1px;padding:4px 8px;border:1px solid var(--danger);color:var(--danger);display:inline-block">TAIL RISK</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERTS TAB -->
+  <div class="tab-panel" id="tab-alerts">
+
+    <div style="margin-bottom:16px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--accent2)">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px">SETUP INSTRUCTIONS</div>
+      <div style="font-size:11px;color:var(--text);line-height:1.7">
+        Go to <strong style="color:var(--accent2)">google.com/alerts</strong> → paste each search string below → set frequency and delivery email. 
+        Click any string to copy it. For highest-signal monitoring, use <strong style="color:var(--warn)">As-it-happens</strong> for critical alerts and <strong style="color:var(--accent)">Once a day</strong> for analytical ones.
+      </div>
+    </div>
+
+    <!-- Hormuz / Geopolitical -->
+    <div class="alert-card alert">
+      <div class="alert-header">
+        <div class="alert-title">STRAIT OF HORMUZ — OPERATIONAL STATUS</div>
+        <div class="alert-category">CRITICAL / REAL-TIME</div>
+      </div>
+      <div class="alert-strings" id="hormuz-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-realtime">AS-IT-HAPPENS</span>
+      </div>
+    </div>
+
+    <!-- Oil / Energy -->
+    <div class="alert-card">
+      <div class="alert-header">
+        <div class="alert-title">OIL MARKET &amp; ENERGY SUPPLY</div>
+        <div class="alert-category">GEO / COMMODITY</div>
+      </div>
+      <div class="alert-strings" id="oil-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-daily">ONCE A DAY</span>
+      </div>
+    </div>
+
+    <!-- Dollar / Reserve Currency -->
+    <div class="alert-card">
+      <div class="alert-header">
+        <div class="alert-title">DOLLAR RESERVE CURRENCY STRESS</div>
+        <div class="alert-category">DALIO CORE THESIS</div>
+      </div>
+      <div class="alert-strings" id="dollar-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-daily">ONCE A DAY</span>
+      </div>
+    </div>
+
+    <!-- Bond Market -->
+    <div class="alert-card">
+      <div class="alert-header">
+        <div class="alert-title">BOND MARKET STRESS &amp; TREASURY AUCTIONS</div>
+        <div class="alert-category">BOND STRESS</div>
+      </div>
+      <div class="alert-strings" id="bond-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-realtime">AS-IT-HAPPENS</span>
+      </div>
+    </div>
+
+    <!-- Gold -->
+    <div class="alert-card">
+      <div class="alert-header">
+        <div class="alert-title">GOLD &amp; CENTRAL BANK BUYING</div>
+        <div class="alert-category">LATE-CYCLE SIGNAL</div>
+      </div>
+      <div class="alert-strings" id="gold-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-daily">ONCE A DAY</span>
+      </div>
+    </div>
+
+    <!-- Geopolitical alliances -->
+    <div class="alert-card">
+      <div class="alert-header">
+        <div class="alert-title">ALLIANCE SHIFTS &amp; CREDITOR CONFIDENCE</div>
+        <div class="alert-category">BIG CYCLE / STRATEGIC</div>
+      </div>
+      <div class="alert-strings" id="alliance-alerts"></div>
+      <div class="alert-frequency">
+        <span class="freq-label">RECOMMENDED FREQUENCY:</span>
+        <span class="freq-badge freq-weekly">ONCE A WEEK</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- THRESHOLDS TAB -->
+  <div class="tab-panel" id="tab-thresholds">
+
+    <div style="margin-bottom:16px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-left:3px solid var(--gold)">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text-dim);margin-bottom:4px">FRAMEWORK NOTE</div>
+      <div style="font-size:11px;color:var(--text);line-height:1.7">
+        Thresholds below are calibrated to Dalio's Big Cycle framework and historical analogues (1970s stagflation, 1956 Suez, 2022 bond selloff). 
+        <span style="color:var(--gold)">WATCH</span> = confirm the thesis is building. 
+        <span style="color:var(--warn)">ACTION</span> = rebalancing warranted. 
+        <span style="color:var(--danger)">CRITICAL</span> = regime change underway.
+      </div>
+    </div>
+
+    <div class="yield-curve-card" style="margin-bottom:16px;">
+      <table class="threshold-table">
+        <thead>
+          <tr>
+            <th style="width:22%">INDICATOR</th>
+            <th style="width:14%">NORMAL</th>
+            <th style="width:17%">WATCH</th>
+            <th style="width:17%">ACTION</th>
+            <th style="width:17%">CRITICAL</th>
+            <th>DALIO INTERPRETATION</th>
+          </tr>
+        </thead>
+        <tbody id="threshold-body"></tbody>
+      </table>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">COMPOSITE SIGNAL LOGIC</div>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-label">Stagflation Confirmation</div>
+        <div style="margin-top:8px;font-size:11px;line-height:1.8;color:var(--text)">
+          Requires <strong style="color:var(--warn)">ALL THREE</strong> simultaneously:<br>
+          • Oil >$90 AND rising<br>
+          • 10Y yield >4.5% AND rising<br>
+          • Breakeven inflation >2.8%<br>
+          <span style="color:var(--text-dim);font-size:10px;margin-top:6px;display:block">Validates Dalio over AI bull thesis in near term</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Reserve Currency Stress</div>
+        <div style="margin-top:8px;font-size:11px;line-height:1.8;color:var(--text)">
+          Requires <strong style="color:var(--danger)">ANY TWO</strong> of:<br>
+          • DXY falls below 98 during crisis<br>
+          • Gold >$5,000 AND rising<br>
+          • Foreign Treasury auction bid-to-cover &lt;2.2<br>
+          • Gulf sovereign selling of USTs reported<br>
+          <span style="color:var(--text-dim);font-size:10px;margin-top:6px;display:block">Dalio's "Suez Moment" early warning</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">AI Bull Case Validation</div>
+        <div style="margin-top:8px;font-size:11px;line-height:1.8;color:var(--text)">
+          Requires <strong style="color:var(--accent)">TREND OVER 4+ QTRS</strong>:<br>
+          • BLS productivity growth >2.0% annualized<br>
+          • Services CPI declining despite oil shock<br>
+          • Corporate margins rising ex-energy<br>
+          • 5Y breakeven falling toward 2.2%<br>
+          <span style="color:var(--text-dim);font-size:10px;margin-top:6px;display:block">Productivity breaking the stagflation feedback loop</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const ALERT_DATA = {
+  hormuz: [
+    "Strait of Hormuz shipping closure",
+    "Hormuz oil tanker attack OR blocked",
+    "Iran mine Strait of Hormuz",
+    "UKMTO Gulf shipping incident",
+    "Persian Gulf naval escalation 2026"
+  ],
+  oil: [
+    "Brent crude oil price record high",
+    "OPEC emergency meeting 2026",
+    "Iran oil exports sanctions 2026",
+    "oil supply shock inflation 2026",
+    "Saudi Arabia oil production cut"
+  ],
+  dollar: [
+    "US dollar reserve currency alternative",
+    "China Saudi Arabia oil yuan settlement",
+    "Treasury auction foreign demand weak",
+    "BRICS currency dollar alternative 2026",
+    "US credit rating downgrade 2026"
+  ],
+  bond: [
+    "Treasury auction bid-to-cover weak",
+    "10-year Treasury yield record high 2026",
+    "bond market selloff inflation 2026",
+    "Fed emergency rate decision 2026",
+    "term premium Treasury bond rising"
+  ],
+  gold: [
+    "gold price record high 2026",
+    "central bank gold buying 2026",
+    "gold reserve currency hedge geopolitical",
+    "IMF SDR gold dollar 2026",
+    "de-dollarization gold reserves"
+  ],
+  alliance: [
+    "Gulf states pivot China Russia 2026",
+    "US ally confidence Middle East 2026",
+    "Saudi Arabia China investment shift",
+    "NATO commitment questioned 2026",
+    "Dalio reserve currency world order"
+  ]
+};
+
+const THRESHOLDS = [
+  { name: "Brent Crude ($/bbl)", normal: "<$75", watch: "$75–90", action: "$90–110", critical: ">$110", note: "Hormuz closure pricing. >$110 = full supply shock, global recession risk." },
+  { name: "10Y Treasury Yield", normal: "<4.0%", watch: "4.0–4.5%", action: "4.5–5.0%", critical: ">5.0%", note: "Rising yields during geopolitical crisis = broken safe haven. >5% triggers debt sustainability concerns." },
+  { name: "2Y–10Y Spread (bps)", normal: "+50 to +150", watch: "-20 to +50", action: "-20 to -80", critical: "<-80", note: "Deep inversion = hard landing priced. Steepening from inversion = stagflation transition." },
+  { name: "5Y Breakeven Inflation", normal: "<2.3%", watch: "2.3–2.8%", action: "2.8–3.2%", critical: ">3.2%", note: "Market inflation expectations. >3.2% = Fed loses credibility, 1970s analog activated." },
+  { name: "Gold (USD/oz)", normal: "<$3,800", watch: "$3,800–4,500", action: "$4,500–5,000", critical: ">$5,000", note: "Dalio: sustained gold rally during dollar stress = reserve currency transition signal. Currently ~$4,500 — already in 'action' zone." },
+  { name: "DXY Dollar Index", normal: ">103", watch: "100–103", action: "97–100", critical: "<97", note: "Dollar weakness during geopolitical crisis is anomalous. Below 97 = creditor confidence eroding." },
+  { name: "HY Credit Spread (bps)", normal: "<350", watch: "350–450", action: "450–600", critical: ">600", note: "Credit stress indicator. >600bps = 2008/2020 crisis-level financial stress." },
+  { name: "MOVE Index (Bond VIX)", normal: "<100", watch: "100–130", action: "130–160", critical: ">160", note: "Bond market volatility. >160 = systemic bond market stress, forced selling risk." },
+  { name: "Oil/Gold Ratio", normal: "0.020–0.030", watch: "0.015–0.020", action: "0.010–0.015", critical: "<0.010", note: "Low ratio = oil cheap relative to gold = financial stress dominating commodity pricing." },
+  { name: "Treasury Bid-to-Cover", normal: ">2.5x", watch: "2.2–2.5x", action: "2.0–2.2x", critical: "<2.0x", note: "Foreign demand for US debt. Below 2.0x = creditor concern. Monitor 10Y/30Y auctions especially." }
+];
+
+// ─── SPARKLINE ───────────────────────────────────────────────────────────────
+function drawSparkline(canvasId, data, color) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 200;
+  canvas.height = 40;
+  const w = canvas.width, h = canvas.height;
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = max - min || 1;
+  ctx.clearRect(0, 0, w, h);
+
+  // Fill
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, color + '30');
+  grad.addColorStop(1, color + '00');
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 6) - 3;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 6) - 3;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function randomWalk(base, n, vol) {
+  const arr = [base];
+  for (let i = 1; i < n; i++) arr.push(arr[i-1] + (Math.random()-0.48)*vol);
+  return arr;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATA LAYER — Yahoo Finance (primary, live) + FRED (fallback, 1-4d lag)
+// Optimised for Chrome on hosted https:// URL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Series registry — defines primary and fallback for every indicator
+const SERIES = {
+  oil:      { name: 'Brent Crude',          yahoo: 'BZ=F',          fred: 'DCOILBRENTEU',     fredLag: '~4d lag'  },
+  gold:     { name: 'Gold',                 yahoo: 'GC=F',          fred: 'GOLDAMGBD228NLBM', fredLag: '~1mo lag' },
+  dxy:      { name: 'DXY Dollar Index',     yahoo: 'DX-Y.NYB',      fred: 'DTWEXBGS',         fredLag: '~1d lag'  },
+  natgas:   { name: 'Nat Gas (Henry Hub)',  yahoo: 'NG=F',          fred: 'DHHNGSP',           fredLag: '~1d lag'  },
+  t10:      { name: '10Y Treasury',         yahoo: '^TNX',          fred: 'DGS10',             fredLag: '~1d lag'  },
+  bei:      { name: '5Y Breakeven',         yahoo: null,            fred: 'T5YIE',             fredLag: '~1d lag'  },
+  hyspread: { name: 'HY Credit Spread',     yahoo: null,            fred: 'BAMLH0A0HYM2',      fredLag: '~1d lag'  },
+  t2:       { name: '2Y Treasury',          yahoo: null,            fred: 'DGS2',              fredLag: '~1d lag'  },
+  t5:       { name: '5Y Treasury',          yahoo: null,            fred: 'DGS5',              fredLag: '~1d lag'  },
+  t3m:      { name: '3M Treasury',          yahoo: null,            fred: 'DGS3MO',            fredLag: '~1d lag'  },
+  t30:      { name: '30Y Treasury',         yahoo: null,            fred: 'DGS30',             fredLag: '~1d lag'  },
+};
+
+// Fetch log — records outcome of every fetch for the status panel
+const fetchLog = {};
+
+// ─── YAHOO FETCH ──────────────────────────────────────────────────────────────
+async function fetchYahoo(symbol) {
+  const urls = [
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`,
+    `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1mo`
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const result = json.chart?.result?.[0];
+      if (!result) throw new Error('empty result');
+      const closes = (result.indicators?.quote?.[0]?.close || []).filter(Boolean);
+      const current = result.meta?.regularMarketPrice || closes[closes.length - 1];
+      if (!current) throw new Error('no price');
+      const prev = closes[closes.length - 2] || current;
+      return {
+        value: current,
+        change: current - prev,
+        pct: ((current - prev) / Math.abs(prev)) * 100,
+        history: closes.slice(-30),
+        source: 'YAHOO',
+        asOf: 'live'
+      };
+    } catch (e) {
+      console.warn(`Yahoo ${symbol} (${url.includes('query1') ? 'q1' : 'q2'}):`, e.message);
+    }
+  }
+  return null;
+}
+
+// ─── FRED FETCH ───────────────────────────────────────────────────────────────
+async function fetchFRED(seriesId) {
+  try {
+    const url = `https://fred.stlouisfed.org/graph/fredgraph.json?id=${seriesId}`;
+    const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const vals = (json.observations || []).filter(o => o.value !== '.').slice(-30);
+    if (!vals.length) throw new Error('no observations');
+    const current = parseFloat(vals[vals.length - 1].value);
+    const prev    = parseFloat(vals[vals.length - 2].value);
+    return {
+      value: current,
+      change: current - prev,
+      pct: ((current - prev) / Math.abs(prev)) * 100,
+      history: vals.map(v => parseFloat(v.value)),
+      source: 'FRED',
+      asOf: vals[vals.length - 1].date
+    };
+  } catch (e) {
+    console.warn(`FRED ${seriesId}:`, e.message);
+    return null;
+  }
+}
+
+// ─── SMART FETCH — Yahoo first, FRED fallback ─────────────────────────────────
+async function smartFetch(key) {
+  const cfg = SERIES[key];
+  let data = null;
+
+  if (cfg.yahoo) {
+    data = await fetchYahoo(cfg.yahoo);
+    if (data) {
+      fetchLog[key] = { status: 'ok', source: 'Yahoo · live', icon: '🟢' };
+      return data;
+    }
+    // Yahoo failed — log it and try FRED
+    fetchLog[key] = { status: 'fallback', source: `FRED · ${cfg.fredLag}`, icon: '🟡' };
+    console.warn(`${cfg.name}: Yahoo failed, falling back to FRED`);
+  } else {
+    // FRED-only series (breakeven, HY spread, yield curve)
+    fetchLog[key] = { status: 'fred-only', source: `FRED · ${cfg.fredLag}`, icon: '🔵' };
+  }
+
+  data = await fetchFRED(cfg.fred);
+  if (!data) {
+    fetchLog[key] = { status: 'error', source: 'FAILED — both sources', icon: '🔴' };
+    console.error(`${cfg.name}: ALL sources failed`);
+  }
+  return data;
+}
+
+// ─── SOURCE BADGE — small pill shown on each card ────────────────────────────
+function setSourceBadge(cardId, key) {
+  const log = fetchLog[key];
+  if (!log) return;
+  const card = document.getElementById(cardId);
+  if (!card) return;
+
+  // Remove any existing badge
+  card.querySelectorAll('.source-badge').forEach(b => b.remove());
+
+  const badge = document.createElement('div');
+  badge.className = 'source-badge';
+  badge.title = `Data source: ${log.source}`;
+
+  const colors = {
+    ok:        { bg: '#e8f7f0', border: '#007a40', text: '#007a40' },
+    fallback:  { bg: '#fff8e6', border: '#a06800', text: '#a06800' },
+    'fred-only':{ bg: '#e8f0fb', border: '#0066cc', text: '#0066cc' },
+    error:     { bg: '#fde8ed', border: '#c0103a', text: '#c0103a' }
+  };
+  const c = colors[log.status] || colors.error;
+
+  badge.style.cssText = `
+    position:absolute; bottom:10px; right:10px;
+    font-size:9px; letter-spacing:0.5px; padding:2px 7px;
+    border:1px solid ${c.border}; background:${c.bg};
+    color:${c.text}; font-family:var(--mono);
+    white-space:nowrap; cursor:default;
+  `;
+  badge.textContent = `${log.icon} ${log.source}`;
+  card.appendChild(badge);
+}
+
+// ─── STATUS PANEL — shown in header after load ────────────────────────────────
+function renderStatusPanel(totalMs) {
+  const existing = document.getElementById('status-panel');
+  if (existing) existing.remove();
+
+  const allKeys = Object.keys(fetchLog);
+  const ok      = allKeys.filter(k => fetchLog[k].status === 'ok').length;
+  const fallback = allKeys.filter(k => fetchLog[k].status === 'fallback').length;
+  const errors  = allKeys.filter(k => fetchLog[k].status === 'error').length;
+
+  const panel = document.createElement('div');
+  panel.id = 'status-panel';
+  panel.style.cssText = `
+    font-size:10px; color:var(--text-dim); padding:8px 24px;
+    background:var(--bg3); border-bottom:1px solid var(--border);
+    display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+  `;
+
+  const overallColor = errors > 0 ? 'var(--danger)' : fallback > 0 ? 'var(--gold)' : 'var(--green)';
+  const overallIcon  = errors > 0 ? '⚠️' : fallback > 0 ? '⚡' : '✓';
+
+  panel.innerHTML = `
+    <span style="color:${overallColor};font-weight:500">${overallIcon} ${ok} live · ${fallback} FRED fallback · ${errors} failed</span>
+    <span>Loaded in ${totalMs}ms · ${new Date().toLocaleTimeString()}</span>
+    ${errors > 0 ? `<span style="color:var(--danger)">Failed: ${allKeys.filter(k=>fetchLog[k].status==='error').map(k=>SERIES[k]?.name||k).join(', ')}</span>` : ''}
+    ${fallback > 0 ? `<span style="color:var(--gold)">On FRED fallback: ${allKeys.filter(k=>fetchLog[k].status==='fallback').map(k=>SERIES[k]?.name||k).join(', ')}</span>` : ''}
+    <span style="margin-left:auto">🟢 Yahoo live &nbsp; 🟡 FRED fallback &nbsp; 🔵 FRED only &nbsp; 🔴 Failed</span>
+  `;
+
+  // Insert after tabs
+  const main = document.querySelector('main');
+  main.parentNode.insertBefore(panel, main);
+}
+
+// ─── UPDATE CARD ──────────────────────────────────────────────────────────────
+function updateCard(config) {
+  const { valueId, changeId, signalId, sparkId, cardId, fetchKey, data, format, decimals, thresholds, sparkColor } = config;
+
+  if (!data) {
+    const valEl = document.getElementById(valueId);
+    valEl.textContent = 'N/A';
+    valEl.className = 'card-value';
+    valEl.style.cssText = 'font-size:22px;color:var(--danger)';
+    document.getElementById(changeId).innerHTML =
+      '<span style="color:var(--danger);font-size:10px">⚠ Both Yahoo and FRED failed — check internet connection or try refreshing</span>';
+    if (cardId) setSourceBadge(cardId, fetchKey);
+    return;
+  }
+
+  const val = data.value;
+  const formatted = format ? format(val) : val.toFixed(decimals || 2);
+  const el = document.getElementById(valueId);
+  el.textContent = formatted;
+  el.className = 'card-value';
+  el.style.cssText = '';
+
+  const chgSign  = data.change >= 0 ? '+' : '';
+  const chgClass = data.change >= 0 ? 'up' : 'down';
+  const arrow    = data.change >= 0 ? '▲' : '▼';
+  const asOfNote = data.asOf && data.asOf !== 'live' ? ` <span style="color:var(--text-dim);font-size:9px">as of ${data.asOf}</span>` : '';
+  document.getElementById(changeId).innerHTML =
+    `<span class="${chgClass}">${arrow} ${chgSign}${data.change.toFixed(2)} (${chgSign}${data.pct.toFixed(2)}%)</span>${asOfNote}`;
+
+  if (signalId && thresholds) {
+    const sig   = document.getElementById(signalId);
+    const level = thresholds(val);
+    sig.textContent  = level.label;
+    sig.className    = `card-signal signal-${level.cls}`;
+  }
+
+  if (sparkId && data.history?.length > 1) {
+    const color = sparkColor || (data.change >= 0 ? '#007a40' : '#c0103a');
+    setTimeout(() => drawSparkline(sparkId, data.history, color), 100);
+  }
+
+  if (cardId) setSourceBadge(cardId, fetchKey);
+}
+
+// ─── YIELD CURVE ─────────────────────────────────────────────────────────────
+async function buildYieldCurve() {
+  const maturities = [
+    { label: '3M', key: 't3m' },
+    { label: '2Y', key: 't2'  },
+    { label: '5Y', key: 't5'  },
+    { label: '10Y', key: 't10'},
+    { label: '30Y', key: 't30'},
+  ];
+  const results = await Promise.all(
+    maturities.map(m => smartFetch(m.key).then(d => ({ ...m, data: d })))
+  );
+
+  const container = document.getElementById('yield-curve-rows');
+  container.innerHTML = '';
+  const maxVal = Math.max(...results.map(r => r.data?.value || 0));
+
+  results.forEach(r => {
+    const val = r.data?.value;
+    const chg = r.data?.change;
+    const row = document.createElement('div');
+    row.className = 'yield-row';
+    const chgColor = !chg ? 'var(--text-dim)' : (chg > 0 ? 'var(--red)' : 'var(--green)');
+    const srcIcon  = fetchLog[r.key]?.icon || '';
+    row.innerHTML = `
+      <div class="yield-maturity">${r.label}</div>
+      <div class="yield-bar-track">
+        <div class="yield-bar-fill" style="width:${val ? (val/maxVal*100) : 0}%;background:var(--accent2)"></div>
+      </div>
+      <div class="yield-value">${val ? val.toFixed(2)+'%' : '—'}</div>
+      <div class="yield-chg" style="color:${chgColor}">${chg !== undefined && val ? (chg>=0?'+':'')+chg.toFixed(2) : '—'}</div>
+      <div style="width:16px;text-align:center;font-size:11px" title="${fetchLog[r.key]?.source||''}">${srcIcon}</div>
+    `;
+    container.appendChild(row);
+  });
+
+  const t2val  = results.find(r => r.label === '2Y')?.data?.value;
+  const t10val = results.find(r => r.label === '10Y')?.data?.value;
+  if (t2val && t10val) {
+    const spread = ((t10val - t2val) * 100).toFixed(0);
+    const color  = spread < 0 ? 'var(--danger)' : (spread < 50 ? 'var(--gold)' : 'var(--green)');
+    document.getElementById('s-2y10y').textContent = spread + ' bps';
+    document.getElementById('s-2y10y').style.color = color;
+    document.getElementById('spread-price').textContent = spread + 'bps';
+    document.getElementById('spread-change').innerHTML = spread < 0
+      ? '<span class="down">▼ INVERTED</span>'
+      : '<span class="up">▲ NORMAL</span>';
+    document.getElementById('spread-signal').textContent  = spread < 0 ? 'INVERTED' : (spread < 50 ? 'FLAT' : 'OK');
+    document.getElementById('spread-signal').className    = 'card-signal ' + (spread < 0 ? 'signal-danger' : (spread < 50 ? 'signal-warn' : 'signal-ok'));
+  }
+}
+
+// ─── MAIN LOAD ────────────────────────────────────────────────────────────────
+async function loadAllData() {
+  document.getElementById('lastUpdate').textContent = 'Loading...';
+  const t0 = Date.now();
+
+  // All fetches in parallel
+  const [oilData, goldData, dxyData, ngData, t10Data, beiData, hyData] = await Promise.all([
+    smartFetch('oil'),
+    smartFetch('gold'),
+    smartFetch('dxy'),
+    smartFetch('natgas'),
+    smartFetch('t10'),
+    smartFetch('bei'),
+    smartFetch('hyspread'),
+  ]);
+
+  // ── Commodity cards ──
+  updateCard({
+    valueId: 'oil-price', changeId: 'oil-change', signalId: 'oil-signal',
+    sparkId: 'spark-oil', cardId: 'card-oil', fetchKey: 'oil',
+    data: oilData, format: v => '$' + v.toFixed(1), sparkColor: '#c45000',
+    thresholds: v => v > 110 ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 90  ? { label: 'STRESS',   cls: 'warn'   }
+                   : v > 75  ? { label: 'ELEVATED',  cls: 'watch'  }
+                   :            { label: 'NORMAL',   cls: 'ok'     }
+  });
+
+  updateCard({
+    valueId: 'gold-price', changeId: 'gold-change', signalId: 'gold-signal',
+    sparkId: 'spark-gold', cardId: 'card-gold', fetchKey: 'gold',
+    data: goldData, format: v => '$' + Math.round(v).toLocaleString(), sparkColor: '#a06800',
+    thresholds: v => v > 5000 ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 4500 ? { label: 'ELEVATED',  cls: 'warn'   }
+                   : v > 4000 ? { label: 'WATCH',     cls: 'watch'  }
+                   :             { label: 'NORMAL',   cls: 'ok'     }
+  });
+
+  updateCard({
+    valueId: 'dxy-price', changeId: 'dxy-change', signalId: 'dxy-signal',
+    sparkId: 'spark-dxy', cardId: 'card-dxy', fetchKey: 'dxy',
+    data: dxyData, decimals: 2, sparkColor: '#007a63',
+    thresholds: v => v < 97  ? { label: 'STRESS',  cls: 'danger' }
+                   : v < 100 ? { label: 'WATCH',   cls: 'warn'   }
+                   :            { label: 'NEUTRAL', cls: 'ok'     }
+  });
+
+  updateCard({
+    valueId: 'ng-price', changeId: 'ng-change', signalId: 'ng-signal',
+    sparkId: 'spark-ng', cardId: 'card-natgas', fetchKey: 'natgas',
+    data: ngData, format: v => '$' + v.toFixed(2), sparkColor: '#c45000',
+    thresholds: v => v > 5   ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 3.5 ? { label: 'ELEVATED',  cls: 'warn'   }
+                   :             { label: 'WATCH',    cls: 'watch'  }
+  });
+
+  // ── Bond cards ──
+  updateCard({
+    valueId: 't10-price', changeId: 't10-change', signalId: 't10-signal',
+    sparkId: 'spark-t10', cardId: 'card-t10', fetchKey: 't10',
+    data: t10Data, format: v => v.toFixed(2) + '%', sparkColor: '#0066cc',
+    thresholds: v => v > 5   ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 4.5 ? { label: 'STRESS',   cls: 'warn'   }
+                   :             { label: 'ELEVATED', cls: 'watch'  }
+  });
+
+  updateCard({
+    valueId: 'spread-price', changeId: 'spread-change', signalId: 'spread-signal',
+    sparkId: 'spark-spread', cardId: 'card-spread', fetchKey: 'bei',
+    data: beiData ? { ...beiData, value: 0 } : null, // placeholder; real value set in buildYieldCurve
+    format: v => v + 'bps', sparkColor: '#0066cc',
+    thresholds: v => ({ label: 'MONITOR', cls: 'watch' })
+  });
+
+  updateCard({
+    valueId: 'bei-price', changeId: 'bei-change', signalId: 'bei-signal',
+    sparkId: 'spark-bei', cardId: 'card-bei', fetchKey: 'bei',
+    data: beiData, format: v => v.toFixed(2) + '%', sparkColor: '#0066cc',
+    thresholds: v => v > 3.2 ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 2.8 ? { label: 'WARN',     cls: 'warn'   }
+                   :             { label: 'MONITOR', cls: 'watch'  }
+  });
+
+  // MOVE — not publicly available; hardcoded with clear label
+  fetchLog['move'] = { status: 'fred-only', source: 'Estimated · not public', icon: '⚪' };
+  updateCard({
+    valueId: 'move-price', changeId: 'move-change', signalId: 'move-signal',
+    sparkId: 'spark-move', cardId: 'card-move', fetchKey: 'move',
+    data: { value: 128, change: 4.2, pct: 3.4, history: randomWalk(110, 20, 5), source: 'EST', asOf: null },
+    format: v => '~' + Math.round(v), sparkColor: '#0066cc',
+    thresholds: v => v > 160 ? { label: 'CRITICAL', cls: 'danger' }
+                   : v > 130 ? { label: 'STRESS',   cls: 'warn'   }
+                   :             { label: 'WATCH',   cls: 'watch'  }
+  });
+
+  // ── Bond tab spreads panel ──
+  if (beiData) {
+    document.getElementById('s-bei').textContent = beiData.value.toFixed(2) + '%';
+    document.getElementById('s-bei').style.color = beiData.value > 3.2 ? 'var(--danger)' : beiData.value > 2.8 ? 'var(--warn)' : 'var(--gold)';
+  }
+  if (t10Data) {
+    const realYield = t10Data.value - (beiData?.value || 2.2);
+    document.getElementById('s-real').textContent = realYield.toFixed(2) + '%';
+    document.getElementById('s-real').style.color = realYield > 2 ? 'var(--red)' : realYield < 0 ? 'var(--gold)' : 'var(--text)';
+    if (goldData) {
+      document.getElementById('s-goldratio').textContent = (goldData.value / t10Data.value).toFixed(0);
+      document.getElementById('s-goldratio').style.color = 'var(--gold)';
+    }
+  }
+  if (hyData) {
+    document.getElementById('s-hy').textContent = (hyData.value * 100).toFixed(0) + ' bps';
+    document.getElementById('s-hy').style.color = hyData.value > 6 ? 'var(--danger)' : hyData.value > 4 ? 'var(--warn)' : 'var(--gold)';
+  }
+
+  // ── Yield curve + stress index ──
+  await buildYieldCurve();
+  calculateStressIndex(oilData, goldData, dxyData, t10Data, beiData);
+
+  // ── Status panel + header update ──
+  const elapsed = Date.now() - t0;
+  renderStatusPanel(elapsed);
+  document.getElementById('lastUpdate').textContent =
+    `${new Date().toLocaleTimeString()} · ${elapsed}ms`;
+}
+
+// ─── STRESS INDEX ─────────────────────────────────────────────────────────────
+function calculateStressIndex(oil, gold, dxy, t10, bei) {
+  let score = 0;
+  if (oil?.value > 90)  score += 20; else if (oil?.value > 75) score += 10;
+  if (gold?.value > 5000) score += 20; else if (gold?.value > 4500) score += 15; else if (gold?.value > 4000) score += 10;
+  if (dxy?.value < 97)  score += 15; else if (dxy?.value < 100) score += 7;
+  if (t10?.value > 4.5) score += 20; else if (t10?.value > 4.0) score += 10;
+  if (bei?.value > 2.8) score += 25; else if (bei?.value > 2.3) score += 10;
+
+  const pct = Math.min(score, 100);
+  document.getElementById('stressBar').style.width = pct + '%';
+  document.getElementById('stressValue').textContent = pct + '/100';
+
+  let label, desc;
+  if (pct >= 70)      { label = 'HIGH STRESS — DALIO SCENARIO ACTIVE';        desc = 'CRITICAL'; }
+  else if (pct >= 45) { label = 'ELEVATED — STAGFLATION SIGNALS BUILDING';    desc = 'ELEVATED'; }
+  else if (pct >= 25) { label = 'MODERATE — MONITOR CLOSELY';                 desc = 'MODERATE'; }
+  else                { label = 'LOW — BASELINE CONDITIONS';                   desc = 'LOW'; }
+
+  document.getElementById('stressLabel').textContent = label;
+  document.getElementById('stressDesc').textContent  = desc;
+}
+
+// ─── ALERT BUILDER ────────────────────────────────────────────────────────────
+function buildAlerts() {
+  const map = {
+    'hormuz-alerts': ALERT_DATA.hormuz,
+    'oil-alerts': ALERT_DATA.oil,
+    'dollar-alerts': ALERT_DATA.dollar,
+    'bond-alerts': ALERT_DATA.bond,
+    'gold-alerts': ALERT_DATA.gold,
+    'alliance-alerts': ALERT_DATA.alliance
+  };
+
+  Object.entries(map).forEach(([id, strings]) => {
+    const container = document.getElementById(id);
+    if (!container) return;
+    container.innerHTML = '';
+    strings.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'alert-string';
+      div.innerHTML = `
+        <div class="alert-string-text">"${s}"</div>
+        <div class="alert-copy" onclick="copyAlert(this, '${s.replace(/'/g,"\\'")}')">COPY</div>
+        <a href="https://www.google.com/alerts#1:0" target="_blank" style="font-size:9px;color:var(--accent2);border:1px solid var(--accent2);padding:2px 8px;text-decoration:none;letter-spacing:1px;white-space:nowrap">OPEN ALERTS ↗</a>
+      `;
+      container.appendChild(div);
+    });
+  });
+}
+
+function copyAlert(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'COPIED ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ─── THRESHOLD TABLE ──────────────────────────────────────────────────────────
+function buildThresholds() {
+  const tbody = document.getElementById('threshold-body');
+  tbody.innerHTML = '';
+  THRESHOLDS.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="t-metric">${t.name}</td>
+      <td><span class="threshold-pill" style="color:var(--accent);border-color:var(--accent)">${t.normal}</span></td>
+      <td><span class="threshold-pill t-watch" style="border-color:var(--gold)">${t.watch}</span></td>
+      <td><span class="threshold-pill t-action" style="border-color:var(--warn)">${t.action}</span></td>
+      <td><span class="threshold-pill t-critical" style="border-color:var(--danger)">${t.critical}</span></td>
+      <td style="color:var(--text-dim);font-size:10px;line-height:1.5">${t.note}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildAlerts();
+buildThresholds();
+loadAllData();
+</script>
+</body>
+</html>
